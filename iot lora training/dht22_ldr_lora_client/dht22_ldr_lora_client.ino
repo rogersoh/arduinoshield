@@ -37,6 +37,9 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 void setup()
 {
+  dht.begin();
+  delay(1000);
+
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
 
@@ -60,16 +63,16 @@ void setup()
   Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
   rf95.setTxPower(23, false);
 
-  dht.begin();
 }
 
 void loop()
 {
   // Get temperature event and print its value.
+  delay(500);
   Serial.println("Transmitting...");
 
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
+  float  t = dht.readTemperature();
+  float  h = dht.readHumidity();
   sensorValue = analogRead(sensorPin);
   battRaw = 0;
   for (int i = 0; i < 10; i++) {
@@ -91,7 +94,7 @@ void loop()
   myval = sensorValue;
   payload[4] = highByte(myval);
   payload[5] = lowByte(myval);
-  myval = battValue*100;
+  myval = battValue * 100;
   payload[6] = highByte(myval);
   payload[7] = lowByte(myval);
 
@@ -107,7 +110,7 @@ void loop()
   for (int i = 0; i < payloadsize; i++) {
     e += "," + String (payload[i], 16);
   }
-  e +=" ";
+  e += " ";
   Serial.println(d);
   //Serial.println(e);
   delay(1000);
