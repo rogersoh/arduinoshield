@@ -1,21 +1,29 @@
-#include <RH_RF95.h>
-#include "DHT.h"
+#include <RH_RF95.h> //lora radio
+#include "DHT.h"  // temp humidity sensor
+#include <Adafruit_SleepyDog.h> // watchdog n sleep library
 
+// SleepDog watchdog For boards with "native" USB support (e.g. not using an FTDI chip or
+// similar serial bridge), Serial connection may be lost on sleep/wake.
+
+// DHT sensor
 #define DHTPIN 3     // what digital pin we're connected to
 #define DHTTYPE DHT22   // DHT 22
 DHT dht(DHTPIN, DHTTYPE);
 
-int sensorPin = A0;
-int battPin = A3;
+//LDR and battery level
+int sensorPin = A0;  //LDR
+int battPin = A3;  //Battery level
 int sensorValue = 0;
 float battValue = 0.0;
 int battRaw = 0;
+
 String deviceID = "S2";  //device identification
 
 int myval;
 byte payload[8];
 int payloadsize = 8;
 
+// lora radio setting
 
 //for arduino uno lora shield
 #define RFM95_CS 10
@@ -35,11 +43,14 @@ int payloadsize = 8;
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
+
 void setup()
 {
   dht.begin();
   delay(1000);
-
+  int countdownMS = Watchdog.enable();
+  
+  //set lora radio
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
 
@@ -63,10 +74,12 @@ void setup()
   Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
   rf95.setTxPower(23, false);
 
+  Serial.print("Watchdog maximum time is ");
+  Serial.println(countdownMS, DEC);
+  Watchdog.reset();
 }
 
-void loop()
-{
+void loop() {
   // Get temperature event and print its value.
   delay(500);
   Serial.println("Transmitting...");
@@ -113,6 +126,7 @@ void loop()
   e += " ";
   Serial.println(d);
   //Serial.println(e);
+  Watchdog.reset();
   delay(1000);
 
   char data[e.length()];
@@ -126,5 +140,16 @@ void loop()
   rf95.waitPacketSent();
   Serial.println(" complete...");
 
-  delay(50000);
+  //set sleep duration each sleep
+  for (int i = 0; i < 60; i++) {
+    int sleepMS = Watchdog.sleep(4000);
+    Watchdog.reset();
+  }
+  // Try to reattach USB connection on "native USB" boards (connection is
+  // lost on sleep). Host will also need to reattach to the Serial monitor.
+  // Seems not entirely reliable, hence the LED indicator fallback.
+#if defined(USBCON) && !defined(USE_TINYUSB)
+  USBDevice.attach();
+#endif
+
 }
